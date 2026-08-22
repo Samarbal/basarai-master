@@ -14,7 +14,7 @@
 - [ ] Redesign login/signup with two-mode choice UI
 - [ ] Implement session management and redirects
 - [ ] API-key (BYOK) basic onboarding ready
-- [ ] Backend auth endpoints validated
+- [ ] Supabase Auth client flow and protected API token validation verified
 - [ ] Ready for UAT testing
 
 ---
@@ -112,46 +112,27 @@
    - Error message display
    - Submit button with loading state
 
-3. Existing login endpoint
-   - Reuse existing login logic
-   - Add session persistence
+3. Supabase Auth client integration
+   - Reuse `supabase.auth.signInWithPassword()` and `supabase.auth.signUp()`
+   - Add session persistence through the existing Supabase client and middleware
 
 4. Hook integration
    - Use existing `useAuth()` hook or extend it
-   - Call `POST /auth/signup` with mode
-   - Store JWT in session
+   - Call Supabase Auth directly with mode stored through `PATCH /me`
+   - Send the Supabase JWT only as a Bearer token to protected APIs
    - Handle basic errors
 
 #### Backend Auth Updates (Backend Engineer - 3 days)
-1. Ensure existing auth endpoints are functional:
-   - `POST /auth/signup` - creates user + profile
-   - `POST /auth/login` - returns JWT
-   - `GET /auth/me` - returns current user
+1. Verify the authentication architecture:
+   - Supabase Auth owns signup, login, logout, password reset, and magic links
+   - FastAPI exposes no custom authentication routes
+   - `GET /me` returns the authenticated profile
+   - `PATCH /me` updates `mode`, `selected_plan`, and `full_name`
 
-2. Add new fields to signup payload:
-   ```python
-   class SignupRequest(BaseModel):
-       email: str
-       password: str
-       mode: Literal["byok", "subscription"]
-       plan_id: Optional[str] = None  # Only for subscription mode
-   ```
+2. Verify profile fields and validation for `mode`, `selected_plan`, and `full_name`.
+3. Verify JWT validation and 401 responses on protected routes.
 
-3. Update profile creation logic:
-   ```python
-   # After signup, create profile with mode preference
-   profile = {
-       "user_id": user_id,
-       "mode": "byok" | "subscription",
-       "selected_plan": plan_id or None,
-       "created_at": now()
-   }
-   ```
 
-4. Add validation:
-   - Email uniqueness check
-   - Password strength validation
-   - Plan exists check if subscription mode
 
 #### Testing Acceptance
 - [ ] Signup form with BYOK mode works
@@ -458,18 +439,18 @@ Brand dashboard UX improvements moved to Sprint 2 to fit 1-week timeline. Focus 
 ### 4.3 Backend Engineer Tasks (BE 1) - Days 1-5
 
 **Day 1: Audit & Planning**
-- [ ] Review existing auth implementation
-- [ ] Check `POST /auth/signup` endpoint
-- [ ] Check `POST /auth/login` endpoint
+- [ ] Review Supabase Auth client and middleware behavior
+- [ ] Verify `GET /me` and `PATCH /me`
+- [ ] Confirm no custom Auth router is registered in FastAPI
 - [ ] Document current behavior
-- [ ] Plan changes needed
+- [ ] Plan only profile/authorization changes needed
 
-**Day 2-3: Auth Endpoint Updates**
-- [ ] Add `mode` field to signup (byok/subscription)
-- [ ] Validate `mode` in request
-- [ ] Update profile creation with mode
-- [ ] Test with Postman
-- [ ] Document new payload schema
+**Day 2-3: Profile Contract Validation**
+- [ ] Validate `mode` as `byok` or `subscription`
+- [ ] Validate `selected_plan` rules
+- [ ] Verify profile update through `PATCH /me`
+- [ ] Test protected endpoints with a Supabase token
+- [ ] Document the profile payload schema
 
 **Day 4: Session & Token Validation**
 - [ ] Verify JWT validation on protected routes
@@ -486,7 +467,8 @@ Brand dashboard UX improvements moved to Sprint 2 to fit 1-week timeline. Focus 
 - [ ] Final code review
 
 **Deliverables:**
-- Auth endpoints working with mode field
+- Supabase Auth architecture verified
+- `/me` profile contract documented
 - API documentation
 - Test scenarios for QA
 - Postman collection
@@ -500,13 +482,15 @@ Brand dashboard UX improvements moved to Sprint 2 to fit 1-week timeline. Focus 
 
 **Testing with Postman/cURL:**
 ```bash
-# Signup
-POST http://localhost:8000/auth/signup
+# Authentication is performed by the Supabase client SDK.
+# FastAPI receives only the resulting Bearer token.
+
+# Update profile mode
+PATCH http://localhost:8000/me
+Authorization: Bearer <supabase_access_token>
 {
-  "email": "test@example.com",
-  "password": "SecurePass123",
-  "mode": "byok",
-  "plan_id": null
+   "mode": "byok",
+   "selected_plan": null
 }
 
 # Get brands
