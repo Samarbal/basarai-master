@@ -9,6 +9,8 @@ class ProfileResponse(BaseModel):
     email: str
     full_name: Optional[str] = None
     avatar_url: Optional[str] = None
+    mode: str = "byok"
+    selected_plan: Optional[str] = None
     is_admin: bool = False
     created_at: datetime
     updated_at: datetime
@@ -17,6 +19,8 @@ class ProfileResponse(BaseModel):
 class UpdateProfileRequest(BaseModel):
     full_name: Optional[str] = None
     avatar_url: Optional[str] = None
+    mode: str = "byok"
+    selected_plan: Optional[str] = None
 
     @field_validator("full_name")
     @classmethod
